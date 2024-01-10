@@ -25,6 +25,7 @@ const ui = {
   veil: $('#veil'),
   loadingVeil: $('#loading-veil'),
   loadingVeilString: $('#loading-string'),
+  levelLoadingVeil: $('#level-loading-veil'),
   resetSolutionsString: $('#reset-string'),
   loadingProgressBarContainer: $('#loading-progress-bar-container'),
   loadingProgressBar: $('#loading-progress-bar'),
@@ -120,9 +121,9 @@ const ui = {
 
   editorLevelConfigurationButton: $('#editor-level-configuration-button'),
   editorLevelConfigurationDialog: $('#editor-level-configuration-dialog'),
-  editorLevelConfigurationIsPolarCheckbox: $(
-    '#editor-level-configuration-is-polar-checkbox',
-  ),
+  // editorLevelConfigurationIsPolarCheckbox: $(
+  //   '#editor-level-configuration-is-polar-checkbox',
+  // ),
   editorLevelConfigurationBiomeSelect: $(
     '#editor-level-configuration-biome-select',
   ),
@@ -132,6 +133,7 @@ const ui = {
 
   settingsButton: $('#settings-button'),
   graphicsSettingsDialog: $('#graphics-settings-dialog'),
+  graphicsSettingsCloseButton: $('#graphics-settings-close-button'),
   setResolutionButton: $('#set-resolution-button'),
   setSampleDensityButton: $('#set-sample-density-button'),
   setMiscGraphicsButton: $('#set-misc-graphics-button'),
@@ -217,11 +219,15 @@ const IS_DEVELOPMENT = !IS_PRODUCTION
 if (IS_PRODUCTION) ui.levelInfoDiv.setAttribute('hide', true)
 
 let DEBUG_LEVEL_NICK = null
-// DEBUG_LEVEL_NICK = 'Level Editor'
-// DEBUG_LEVEL_NICK = 'VOLCANO'
-// DEBUG_LEVEL_NICK = 'Constant Lake'
-// DEBUG_LEVEL_NICK = 'Two Below'
-// DEBUG_LEVEL_NICK = 'Time Hard'
+
+// Stupid branch here to make sure DEBUG_LEVEL isn't set in prod
+if (IS_DEVELOPMENT) {
+  // DEBUG_LEVEL_NICK = 'Level Editor'
+  // DEBUG_LEVEL_NICK = 'VOLCANO'
+  // DEBUG_LEVEL_NICK = 'CONSTANT_LAKE'
+  // DEBUG_LEVEL_NICK = 'Two Below'
+  // DEBUG_LEVEL_NICK = 'Time Hard'
+}
 
 const world = World({
   ui,
@@ -466,7 +472,7 @@ ui.tryAgainButton.addEventListener('click', onClickRunButton)
 function onClickShowAllButton(event) {
   let showall = localStorage.getItem('ShowAll')
   if (showall != 'True') {
-    ui.showAllConfirmationDialog.showModal()
+    showDialog(ui.showAllConfirmationDialog)
   } else {
     onShowAllConfirm()
   }
@@ -475,33 +481,61 @@ function onClickShowAllButton(event) {
 ui.showAllButton.addEventListener('click', onClickShowAllButton)
 
 /* Dialogs */
+
 function makeDialogCloseable(dialog) {
   dialog.addEventListener('click', (event) => {
     const x = event.clientX
     const y = event.clientY
+    //access the visible element's bounding rectangle
     const rect = dialog.getBoundingClientRect()
-    const outsideModal =
-      x < rect.x ||
-      x > rect.x + rect.width ||
-      y < rect.y ||
-      y > rect.y + rect.height
+    const outsideModal = !pointInRect(x, y, rect)
     if (outsideModal) {
-      dialog.close()
+      closeDialog(dialog)
     }
   })
 }
+function pointInRect(x, y, rect) {
+  return (
+    x >= rect.x &&
+    x <= rect.x + rect.width &&
+    y >= rect.y &&
+    y <= rect.y + rect.height
+  )
+}
+
+function makeButtonToggleDialog(button, dialog) {
+  button.addEventListener('click', () => {
+    if (dialog.open) {
+      closeDialog(dialog)
+    } else {
+      showDialog(dialog)
+    }
+  })
+}
+function showDialog(dialog){
+  console.log("Showing ", dialog)
+  dialog.classList.remove('hidden')
+  dialog.showModal()
+}
+function closeDialog(dialog){
+  console.log("Closing", dialog)
+  dialog.classList.add('hidden')
+  dialog.close()
+}
 
 function makeButtonOpenDialog(button, dialog) {
-  button.addEventListener('click', () => dialog.showModal())
+  button.addEventListener('click', () => showDialog(dialog))
 }
 
 function makeButtonCloseDialog(button, dialog) {
-  button.addEventListener('click', () => dialog.close())
+  button.addEventListener('click', () => closeDialog(dialog))
 }
 
 makeDialogCloseable(ui.editorSharingLinkDialog)
 makeDialogCloseable(ui.graphicsSettingsDialog)
 makeDialogCloseable(ui.editorLevelConfigurationDialog)
+
+makeButtonCloseDialog(ui.graphicsSettingsCloseButton, ui.graphicsSettingsDialog)
 
 makeButtonOpenDialog(ui.settingsButton, ui.graphicsSettingsDialog)
 // makeButtonCloseDialog(ui.closeGraphicsButton, ui.graphicsSettingsDialog)
@@ -518,34 +552,34 @@ function onClickEditButton(event) {
 ui.editButton.addEventListener('click', onClickEditButton)
 
 function onClickResetButton(event) {
-  ui.resetConfirmationDialog.showModal()
+  showDialog(ui.resetConfirmationDialog)
 }
 
 ui.resetButton.addEventListener('click', onClickResetButton)
 
 function onResetConfirm() {
   world.onResetConfirm()
-  ui.resetConfirmationDialog.close()
+  closeDialog(ui.resetConfirmationDialog)
 }
 
 ui.resetConfirmButton.addEventListener('click', onResetConfirm)
 
 function onResetCancel() {
-  ui.resetConfirmationDialog.close()
+  closeDialog(ui.resetConfirmationDialog)
 }
 
 ui.resetCancelButton.addEventListener('click', onResetCancel)
 
 function onShowAllConfirm() {
   world.navigator.showAll = !world.navigator.showAll
-  ui.showAllConfirmationDialog.close()
+  closeDialog(ui.showAllConfirmationDialog)
   window.localStorage.setItem('ShowAll', 'True')
 }
 
 ui.showAllConfirmButton.addEventListener('click', onShowAllConfirm)
 
 function onShowAllCancel() {
-  ui.showAllConfirmationDialog.close()
+  closeDialog(ui.showAllConfirmationDialog)
 }
 
 ui.showAllCancelButton.addEventListener('click', onShowAllCancel)
@@ -748,10 +782,10 @@ ui.editorLevelConfigurationBiomeSelect.addEventListener('change', () => {
   world.sendEvent('selectBiome', [selectedBiomeKey])
 })
 
-ui.editorLevelConfigurationIsPolarCheckbox.addEventListener('input', () => {
-  const checked = ui.editorLevelConfigurationIsPolarCheckbox.checked
-  world.sendEvent('setPolar', [checked])
-})
+// ui.editorLevelConfigurationIsPolarCheckbox.addEventListener('input', () => {
+//   const checked = ui.editorLevelConfigurationIsPolarCheckbox.checked
+//   world.sendEvent('setPolar', [checked])
+// })
 
 ui.editorLevelConfigurationSledderSelect.addEventListener('input', () => {
   const selectedIndex = ui.editorLevelConfigurationSledderSelect.selectedIndex
